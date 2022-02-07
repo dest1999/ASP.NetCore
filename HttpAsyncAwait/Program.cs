@@ -29,11 +29,15 @@ namespace HttpAsyncAwait
         private static async Task<PostDTO> GetPostByIdViaHTTPAsync(int postId)
         {
             var uri = new Uri("https://jsonplaceholder.typicode.com/posts/" + postId);
+            var jsonOptions = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true
+            };
             using var client = new HttpClient();
             try
             {
                 var response = await client.GetStringAsync(uri);
-                var post = JsonSerializer.Deserialize<PostDTO>(response);
+                var post = JsonSerializer.Deserialize<PostDTO>(response, jsonOptions);
                 Console.WriteLine($"Post id: {postId}");//для отладки и визуализации выполнения
                 return post;
             }
