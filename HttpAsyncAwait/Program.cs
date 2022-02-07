@@ -2,31 +2,45 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HttpAsyncAwait
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        private static CancellationTokenSource cancellationTokenSource = new(800); //значение достаточно мало, чтобы отработала только часть запросов
+        static void Main(string[] args)
         {
             var tasksList = new List<Task<PostDTO>>();
 
             for (int i = 4; i <= 13; i++)
             {
-                tasksList.Add(GetPostByIdViaHTTPAsync(i));
+                tasksList.Add(GetPostByIdViaHTTPAsync(i, cancellationTokenSource));
             }
 
-            await Task.WhenAll(tasksList);
+            //await Task.WhenAll(tasksList);
+            try
+            {
+                Task.WaitAll(tasksList.ToArray());
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
 
             foreach (var item in tasksList)
             {
+                if (item.IsCanceled)
+                {
+                    continue;
+                }
                 PostFileWriter.Write(item.Result);
             }
 
         }
 
-        private static async Task<PostDTO> GetPostByIdViaHTTPAsync(int postId)
+        private static async Task<PostDTO> GetPostByIdViaHTTPAsync(int postId, CancellationTokenSource cancelTokenSource)
         {
             var uri = new Uri("https://jsonplaceholder.typicode.com/posts/" + postId);
             var jsonOptions = new JsonSerializerOptions()
@@ -36,7 +50,7 @@ namespace HttpAsyncAwait
             using var client = new HttpClient();
             try
             {
-                var response = await client.GetStringAsync(uri);
+                var response = await client.GetStringAsync(uri, cancelTokenSource.Token);
                 var post = JsonSerializer.Deserialize<PostDTO>(response, jsonOptions);
                 Console.WriteLine($"Post id: {postId}");//для отладки и визуализации выполнения
                 return post;
