@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -19,7 +20,6 @@ namespace HttpAsyncAwait
                 tasksList.Add(GetPostByIdViaHTTPAsync(i, cancellationTokenSource));
             }
 
-            //await Task.WhenAll(tasksList);
             try
             {
                 Task.WaitAll(tasksList.ToArray());
@@ -28,13 +28,9 @@ namespace HttpAsyncAwait
             {
                 Console.WriteLine(e.Message);
             }
-
-            foreach (var item in tasksList)
+            var completedTasksOnly = tasksList.Where(task => task.Status == TaskStatus.RanToCompletion);
+            foreach (var item in completedTasksOnly)
             {
-                if (item.IsCanceled)
-                {
-                    continue;
-                }
                 PostFileWriter.Write(item.Result);
             }
 
